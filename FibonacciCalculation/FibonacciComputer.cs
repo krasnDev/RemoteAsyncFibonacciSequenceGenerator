@@ -1,4 +1,6 @@
-﻿namespace FibonacciCalculation
+﻿using System.Numerics;
+
+namespace FibonacciCalculation
 {
     /// <summary>
     /// Provides a method to get next number in the Fibonacci sequence
@@ -12,7 +14,13 @@
         /// <returns>The next <see cref="FibonacciNumber"/>.</returns>
         public FibonacciNumber GetNext(FibonacciNumber fibonacci)
         {
-            return new FibonacciNumber(fibonacci.Current, fibonacci.Previous + fibonacci.Current);
+            var current = new BigInteger(fibonacci.Current);
+            if (current.IsZero)
+            {
+                current = new BigInteger(1);
+            }
+            var previous = new BigInteger(fibonacci.Previous);
+            return new FibonacciNumber(current.ToByteArray(), (previous + current).ToByteArray());
         } 
     }
 }

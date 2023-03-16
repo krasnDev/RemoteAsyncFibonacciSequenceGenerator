@@ -1,4 +1,8 @@
 
+using FibonacciCalculation;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using System;
 using Transport;
 
 namespace Application2
@@ -16,7 +20,13 @@ namespace Application2
 
             using var server = app.Services.GetRequiredService<Server>();
 
-            app.MapPost("/api/fib", server.PostHandler);
+            app.MapPost("/api/fib", async (HttpRequest request) =>
+            {
+                await System.Text.Json.JsonSerializer
+                    .DeserializeAsync<TransportMessage<FibonacciNumber>>(request.Body)
+                    .AsTask()
+                    .ContinueWith(t => server.PostHandler(t.Result));
+            });
 
             app.Run();
         }

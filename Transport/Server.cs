@@ -1,7 +1,6 @@
 ﻿using EasyNetQ;
 using FibonacciCalculation;
 using Microsoft.Extensions.Logging;
-
 namespace Transport
 {
     /// <summary>
@@ -9,8 +8,8 @@ namespace Transport
     /// </summary>
     public class Server : IDisposable
     {
-        private const string postedMessage = "Got posted message from task {ID} : {Value}";
-        private const string calculatedMessage = "Calculated next Fibonacci number for task {ID} : {Value}";
+        private const string postedMessage = "Got posted message from task {ID} :\n{Value}";
+        private const string calculatedMessage = "Calculated next Fibonacci number for task {ID} :\n{Value}";
         private readonly ILogger logger;
         private readonly IBus bus;
         private readonly FibonacciComputer fibonacciComputer = new();
@@ -30,14 +29,14 @@ namespace Transport
         /// HTTP Post handler.
         /// </summary>
         /// <param name="message">Instance of base message class <see cref="TransportMessage{T}"/> with current Fibonacci number.</param>
-        public void PostHandler(TransportMessage<FibonacciNumber> message)
+        public async Task PostHandler(TransportMessage<FibonacciNumber> message)
         {
             try
             {
-                logger.LogInformation(postedMessage, message.Id, message.Value);
+                logger.LogInformation(postedMessage, message.Id, message.Value.ToString());
                 var next = fibonacciComputer.GetNext(message.Value);
-                logger.LogInformation(calculatedMessage, message.Id, next.Current);
-                bus.PubSub.PublishAsync(new TransportMessage<FibonacciNumber>(message.Id, next)).ConfigureAwait(false);
+                logger.LogInformation(calculatedMessage, message.Id, next.ToString());
+                await bus.PubSub.PublishAsync(new TransportMessage<FibonacciNumber>(message.Id, next)).ConfigureAwait(false);
             } catch(Exception ex)
             {
                 logger.LogError(ex, ex.Message);

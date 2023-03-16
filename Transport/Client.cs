@@ -1,7 +1,9 @@
 ﻿using EasyNetQ;
 using FibonacciCalculation;
 using Microsoft.Extensions.Logging;
-using System.Net.Http.Json;
+using System.Net.Http.Headers;
+using System.Numerics;
+using System.Text;
 
 namespace Transport
 {
@@ -12,12 +14,13 @@ namespace Transport
     {
         private const string UriString = "http://localhost:7000/";
         private const string PostEndpoint = "/api/fib";
-        private const string Message = "Task {ID} got {Value}";
+        private const string Message = "Task {ID} got\n{Value}";
         private const string StartingCalculationsMessage = "Starting {calcCount} calculations.";
         private readonly ILogger logger;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly IBus bus;
         private readonly string subscriptionId = $"Fibonacci calculation {Environment.ProcessId}";
+        private readonly FibonacciComputer fibonacciComputer = new();
 
         public Client(ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory, IBus bus)
         {
@@ -37,7 +40,10 @@ namespace Transport
                 .Range(0, calculationsCount)
                 .AsParallel()
                 .Select(calcNum =>
-                    Task.Run(() => MessageHandle(new TransportMessage<FibonacciNumber>(calcNum + 1, new FibonacciNumber(0, 1)))))
+                    Task.Run(() =>
+                        MessageHandle(new TransportMessage<FibonacciNumber>(
+                            calcNum + 1,
+                            new FibonacciNumber(BigInteger.Zero.ToByteArray(), BigInteger.Zero.ToByteArray())))))
                 .ToArray();
             logger.LogInformation(StartingCalculationsMessage, calculationsCount);
         }
@@ -53,9 +59,15 @@ namespace Transport
         {
             try
             {
-                logger.LogInformation(Message, message.Id, message.Value);
-                using var httpClient = GetHttpClient();  
-                using var response = await httpClient.PostAsJsonAsync(PostEndpoint, message);
+                logger.LogInformation(Message, message.Id, message.Value.ToString());
+                var nextNumber = fibonacciComputer.GetNext(message.Value);
+                using var httpClient = GetHttpClient();
+                var nextMessage = System.Text.Json.JsonSerializer.Serialize(new TransportMessage<FibonacciNumber>(message.Id, nextNumber));
+                var bytes = Encoding.UTF8.GetBytes(nextMessage);
+                var byteContent = new ByteArrayContent(bytes);
+                byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                using var response = await httpClient.PostAsync(PostEndpoint, byteContent);
+
                 if (response.StatusCode != System.Net.HttpStatusCode.OK)
                 {
                     var error = await response.Content.ReadAsStringAsync();
