@@ -33,17 +33,17 @@ namespace Transport
         /// Starts <paramref name="calculationsCount"/> async calculations of Fibonacci sequence.
         /// </summary>
         /// <param name="calculationsCount">The number of calculations that need to be run.</param>
-        public async void InitCalculations(int calculationsCount)
+        public async Task InitCalculations(int calculationsCount)
         {
-            await bus.PubSub.SubscribeAsync<TransportMessage<FibonacciNumber>>(subscriptionId, MessageHandle);
+            await bus.PubSub.SubscribeAsync<TransportMessage<FibonacciTransport>>(subscriptionId, MessageHandle);
             Enumerable
                 .Range(0, calculationsCount)
                 .AsParallel()
                 .Select(calcNum =>
                     Task.Run(() =>
-                        MessageHandle(new TransportMessage<FibonacciNumber>(
+                        MessageHandle(new TransportMessage<FibonacciTransport>(
                             calcNum + 1,
-                            new FibonacciNumber(BigInteger.Zero.ToByteArray(), BigInteger.Zero.ToByteArray())))))
+                            new FibonacciNumber(BigInteger.Zero, BigInteger.Zero).ToTransport()))))
                 .ToArray();
             logger.LogInformation(StartingCalculationsMessage, calculationsCount);
         }
@@ -55,15 +55,16 @@ namespace Transport
             return httpClient;
         }
 
-        private async void MessageHandle(TransportMessage<FibonacciNumber> message)
+        private async void MessageHandle(TransportMessage<FibonacciTransport> message)
         {
             try
             {
-                logger.LogInformation(Message, message.Id, message.Value.ToString());
-                var nextNumber = fibonacciComputer.GetNext(message.Value);
+                var number = message.Value.FromTransport();
+                logger.LogInformation(Message, message.Id, number.ToString());
+                var nextNumber = fibonacciComputer.GetNext(number);
                 using var httpClient = GetHttpClient();
-                var nextMessage = System.Text.Json.JsonSerializer.Serialize(new TransportMessage<FibonacciNumber>(message.Id, nextNumber));
-                var bytes = Encoding.UTF8.GetBytes(nextMessage);
+                var fibTransport = nextNumber.ToTransport();
+                var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new TransportMessage<FibonacciTransport>(message.Id, fibTransport));
                 var byteContent = new ByteArrayContent(bytes);
                 byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                 using var response = await httpClient.PostAsync(PostEndpoint, byteContent);

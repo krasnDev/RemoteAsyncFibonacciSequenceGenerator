@@ -4,7 +4,7 @@
     /// Base type for message exchange in Rabbit.
     /// </summary>
     /// <typeparam name="T">Type which need to send.</typeparam>
-    public class TransportMessage<T> where T : class
+    public class TransportMessage<T> where T : struct
     {
         /// <summary>
         /// Creates an instance of message class.

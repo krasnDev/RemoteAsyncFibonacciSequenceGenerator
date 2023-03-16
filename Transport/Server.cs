@@ -29,14 +29,16 @@ namespace Transport
         /// HTTP Post handler.
         /// </summary>
         /// <param name="message">Instance of base message class <see cref="TransportMessage{T}"/> with current Fibonacci number.</param>
-        public async Task PostHandler(TransportMessage<FibonacciNumber> message)
+        public async Task PostHandler(TransportMessage<FibonacciTransport> message)
         {
             try
             {
-                logger.LogInformation(postedMessage, message.Id, message.Value.ToString());
-                var next = fibonacciComputer.GetNext(message.Value);
+                var number = message.Value.FromTransport();
+                logger.LogInformation(postedMessage, message.Id, number.ToString());
+                var next = fibonacciComputer.GetNext(number);
                 logger.LogInformation(calculatedMessage, message.Id, next.ToString());
-                await bus.PubSub.PublishAsync(new TransportMessage<FibonacciNumber>(message.Id, next)).ConfigureAwait(false);
+                var fibTransport = number.ToTransport();
+                await bus.PubSub.PublishAsync(new TransportMessage<FibonacciTransport>(message.Id, fibTransport)).ConfigureAwait(false);
             } catch(Exception ex)
             {
                 logger.LogError(ex, ex.Message);

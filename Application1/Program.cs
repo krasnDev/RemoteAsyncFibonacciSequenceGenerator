@@ -6,7 +6,7 @@ namespace Application1
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             IHost host = Host.CreateDefaultBuilder(args).ConfigureServices(services =>
             {
@@ -28,7 +28,7 @@ namespace Application1
                 }
             }
 
-            client.InitCalculations(calcCount);
+            await client.InitCalculations(calcCount);
             Console.ReadLine();
         }
     }

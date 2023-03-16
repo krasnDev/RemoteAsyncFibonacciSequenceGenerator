@@ -14,13 +14,7 @@ namespace FibonacciCalculation
         /// <returns>The next <see cref="FibonacciNumber"/>.</returns>
         public FibonacciNumber GetNext(FibonacciNumber fibonacci)
         {
-            var current = new BigInteger(fibonacci.Current);
-            if (current.IsZero)
-            {
-                current = new BigInteger(1);
-            }
-            var previous = new BigInteger(fibonacci.Previous);
-            return new FibonacciNumber(current.ToByteArray(), (previous + current).ToByteArray());
+            return new FibonacciNumber(fibonacci.Current, fibonacci.Previous + fibonacci.Current);
         } 
     }
 }
